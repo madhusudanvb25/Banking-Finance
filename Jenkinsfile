@@ -1,29 +1,68 @@
 pipeline {
     agent any
-    stages{
-        stage('build project'){
-            steps{
-                git url:'https://github.com/madhusudanvb25/Banking-Finance.git', branch: "main"
-                sh 'mvn clean package'
-              
-            }
-        }
-        stage('Build docker image'){
-            steps{
-                script{
-                    sh 'docker build -t madhuvb/staragileprojectfinance:v1 .'
-                    sh 'docker images'
-                }
-            }
-        }
-         
-        
-     stage('Deploy') {
+    environment {
+        ECR_REPO = '491085389171.dkr.ecr.ap-south-1.amazonaws.com/financeme' // From Terraform output
+        RDS_ENDPOINT = 'terraform-20250515035808999200000001.c92aiw0gsl41.ap-south-1.rds.amazonaws.com:3306' // From Terraform output
+    }
+    stages {
+        stage('Build') {
             steps {
-                sh 'sudo docker run -itd --name My-first-containe21211 -p 8083:8081 madhuvb/staragileprojectfinance:v1'
-                  
+                git 'https://github.com/madhusudanvb25/Banking-Finance.git'
+                sh 'mvn clean package'
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t financeme:${BUILD_NUMBER} .'
+            }
+        }
+        stage('Push to ECR') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    sh 'aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${ECR_REPO}'
+                    sh 'docker tag financeme:${BUILD_NUMBER} ${ECR_REPO}:${BUILD_NUMBER}'
+                    sh 'docker push ${ECR_REPO}:${BUILD_NUMBER}'
                 }
             }
-        
+        }
+        stage('Deploy to Test') {
+            steps {
+                ansiblePlaybook(
+                    playbook: 'deploy_to_test.yml',
+                    inventory: 'inventory.ini',
+                    credentialsId: 'ansible-ssh-key',
+                    extraVars: [
+                        docker_image: "${ECR_REPO}:${BUILD_NUMBER}",
+                        db_url: "jdbc:mysql://${RDS_ENDPOINT}/financeme",
+                        db_username: "admin",
+                        db_password: "admin123456"
+                    ]
+                )
+            }
+        }
+        stage('Run Selenium Tests') {
+            steps {
+                // Placeholder: Implement Selenium tests
+                echo 'Running Selenium tests on test.themadhu.shop'
+            }
+        }
+        stage('Deploy to Prod') {
+            when {
+                expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+            }
+            steps {
+                ansiblePlaybook(
+                    playbook: 'deploy_to_prod.yml',
+                    inventory: 'inventory.ini',
+                    credentialsId: 'ansible-ssh-key',
+                    extraVars: [
+                        docker_image: "${ECR_REPO}:${BUILD_NUMBER}",
+                        db_url: "jdbc:mysql://${RDS_ENDPOINT}/financeme",
+                        db_username: "admin",
+                        db_password: "admin123456"
+                    ]
+                )
+            }
+        }
     }
 }

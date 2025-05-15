@@ -1,0 +1,32 @@
+- hosts: prod
+  become: yes
+  vars:
+    docker_image: "{{ docker_image }}"
+    db_url: "{{ db_url }}"
+    db_username: "{{ db_username }}"
+    db_password: "{{ db_password }}"
+  tasks:
+    - name: Pull Docker image
+      docker_image:
+        name: "{{ docker_image }}"
+        source: pull
+    - name: Stop existing container
+      docker_container:
+        name: financeme
+        state: stopped
+      ignore_errors: yes
+    - name: Remove existing container
+      docker_container:
+        name: financeme
+        state: absent
+    - name: Run new container
+      docker_container:
+        name: financeme
+        image: "{{ docker_image }}"
+        state: started
+        env:
+          SPRING_DATASOURCE_URL: "{{ db_url }}"
+          SPRING_DATASOURCE_USERNAME: "{{ db_username }}"
+          SPRING_DATASOURCE_PASSWORD: "{{ db_password }}"
+        published_ports:
+          - "80:8080"
