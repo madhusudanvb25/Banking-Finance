@@ -7,7 +7,7 @@ pipeline {
     stages {
         stage('Build') {
             steps {
-                git 'https://github.com/madhusudanvb25/Banking-Finance.git'
+                git branch: 'main', url: 'https://github.com/madhusudanvb25/Banking-Finance.git'
                 sh 'mvn clean package'
             }
         }
