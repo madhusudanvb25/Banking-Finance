@@ -1,5 +1,8 @@
 pipeline {
     agent any
+    tools {
+        maven 'maven3'
+    }
     environment {
         ECR_REPO = '491085389171.dkr.ecr.ap-south-1.amazonaws.com/financeme' // From Terraform output
         RDS_ENDPOINT = 'terraform-20250515035808999200000001.c92aiw0gsl41.ap-south-1.rds.amazonaws.com:3306' // From Terraform output
