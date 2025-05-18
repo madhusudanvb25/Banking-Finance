@@ -2,19 +2,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: insureme
+  name: financebank
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: insureme
+      app: financebank
   template:
     metadata:
       labels:
-        app: insureme
+        app: financebank
     spec:
       containers:
-        - name: insurance
+        - name: financebank
           image: madhuvb/financebank:1
           ports:
             - containerPort: 8081
@@ -25,11 +25,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: insureme
+  name: financebank
 spec:
   type: NodePort
   ports:
     - port: 8081
       targetPort: 8081
   selector:
-    app: insureme
+    app: financebank
